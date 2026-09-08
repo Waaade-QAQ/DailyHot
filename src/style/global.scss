@@ -1,7 +1,10 @@
 // 全局样式
+@use "./tokens.scss" as *;
+
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -12,10 +15,44 @@ body,
   height: 100%;
 }
 
+body {
+  background-color: var(--dh-bg-page);
+  color: var(--dh-text-main);
+  font-family: var(--dh-font-body);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 暖色滚动条
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dh-border-subtle);
+  border-radius: var(--dh-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dh-text-muted);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// 文本选中
+::selection {
+  background: var(--dh-brand-soft);
+  color: var(--dh-brand);
+}
+
 // 动画
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.25s ease-in-out;
 }
 
 .fade-enter-from,

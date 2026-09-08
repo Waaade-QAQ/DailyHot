@@ -6,7 +6,7 @@
     :locale="zhCN"
     :date-locale="dateZhCN"
     :theme="theme"
-    :theme-overrides="themeOverrides"
+    :theme-overrides="currentThemeOverrides"
   >
     <n-loading-bar-provider>
       <n-dialog-provider>
@@ -33,36 +33,37 @@ import {
   useNotification,
 } from "naive-ui";
 import { mainStore } from "@/store";
+import { lightThemeOverrides, darkThemeOverrides } from "@/style/naive-theme";
 
 const store = mainStore();
 const osThemeRef = useOsTheme();
 
-// 明暗切换
-let theme = ref(null);
-const changeTheme = () => {
-  if (store.siteTheme === "light") {
-    theme.value = null;
-  } else if (store.siteTheme === "dark") {
-    theme.value = darkTheme;
-  }
-};
-
-// 根据系统决定明暗切换
-const osThemeChange = (val) => {
-  if (store.siteThemeAuto) {
-    val == "dark" ? (store.siteTheme = "dark") : (store.siteTheme = "light");
-  }
-};
-
-// 监听明暗变化
-watch(
-  () => store.siteTheme,
-  () => {
-    changeTheme();
-  }
+const theme = ref(null);
+const currentThemeOverrides = computed(() =>
+  store.siteTheme === "dark" ? darkThemeOverrides : lightThemeOverrides
 );
 
-// 监听系统明暗变化
+const applyTheme = (mode) => {
+  theme.value = mode === "dark" ? darkTheme : null;
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.theme = mode;
+  }
+};
+
+const osThemeChange = (val) => {
+  if (store.siteThemeAuto) {
+    store.siteTheme = val === "dark" ? "dark" : "light";
+  }
+};
+
+watch(
+  () => store.siteTheme,
+  (val) => {
+    applyTheme(val);
+  },
+  { immediate: true }
+);
+
 watch(
   () => osThemeRef.value,
   (val) => {
@@ -70,22 +71,13 @@ watch(
   }
 );
 
-// 配置主题色
-const themeOverrides = {
-  common: {
-    primaryColor: "#ea444d",
-    primaryColorHover: "#F57B74",
-    primaryColorSuppl: "#F57B74",
-    primaryColorPressed: "#F64B41",
-  },
-};
+provide("themeOverrides", currentThemeOverrides);
 
-// 挂载 naive 组件的方法
 const setupNaiveTools = () => {
-  window.$loadingBar = useLoadingBar(); // 进度条
-  window.$notification = useNotification(); // 通知
-  window.$message = useMessage(); // 信息
-  window.$dialog = useDialog(); // 对话框
+  window.$loadingBar = useLoadingBar();
+  window.$notification = useNotification();
+  window.$message = useMessage();
+  window.$dialog = useDialog();
 };
 
 const NaiveProviderContent = defineComponent({
@@ -102,7 +94,7 @@ const NaiveProviderContent = defineComponent({
 });
 
 onMounted(() => {
-  changeTheme();
   osThemeChange(osThemeRef.value);
+  applyTheme(store.siteTheme);
 });
 </script>

@@ -1,0 +1,81 @@
+// 暖白轻刊 - 设计 Token
+:root,
+html[data-theme="light"] {
+  --dh-bg-page: #FFF8F4;
+  --dh-bg-surface: #FFFFFF;
+  --dh-bg-overlay: #FFF0EB;
+  --dh-bg-hover: #FDF3EE;
+  --dh-border-hairline: #F2E5DF;
+  --dh-border-subtle: #E8D6CE;
+
+  --dh-text-main: #1A1412;
+  --dh-text-secondary: #6E625C;
+  --dh-text-muted: #A89B93;
+
+  --dh-brand: #FE2C55;
+  --dh-brand-hover: #FF5A77;
+  --dh-brand-pressed: #E2244D;
+  --dh-brand-soft: #FFE9E2;
+  --dh-brand-soft-hover: #FFDFD5;
+
+  --dh-rank-1: #FE2C55;
+  --dh-rank-2: #F46B54;
+  --dh-rank-3: #F2B33D;
+  --dh-rank-coral: #FF8F7A;
+
+  --dh-shadow-sm: 0 1px 2px rgba(143, 64, 20, 0.05);
+  --dh-shadow-md: 0 6px 20px rgba(143, 64, 20, 0.07);
+  --dh-shadow-hover: 0 10px 28px rgba(143, 64, 20, 0.12);
+
+  --dh-header-bg: rgba(255, 248, 244, 0.85);
+  --dh-header-border: rgba(242, 229, 223, 0.8);
+
+  --dh-heat-track: rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme="dark"] {
+  --dh-bg-page: #171311;
+  --dh-bg-surface: #1F1A18;
+  --dh-bg-overlay: #26201D;
+  --dh-bg-hover: #2C2420;
+  --dh-border-hairline: #352B26;
+  --dh-border-subtle: #463933;
+
+  --dh-text-main: #F6EFEA;
+  --dh-text-secondary: #B7AAA2;
+  --dh-text-muted: #85786F;
+
+  --dh-brand: #FE2C55;
+  --dh-brand-hover: #FF5A77;
+  --dh-brand-pressed: #E2244D;
+  --dh-brand-soft: rgba(254, 44, 85, 0.12);
+  --dh-brand-soft-hover: rgba(254, 44, 85, 0.2);
+
+  --dh-rank-1: #FE2C55;
+  --dh-rank-2: #F46B54;
+  --dh-rank-3: #F2B33D;
+  --dh-rank-coral: #FF8F7A;
+
+  --dh-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --dh-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --dh-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  --dh-header-bg: rgba(23, 19, 17, 0.85);
+  --dh-header-border: rgba(53, 43, 38, 0.8);
+
+  --dh-heat-track: rgba(255, 255, 255, 0.16);
+}
+
+:root {
+  --dh-radius-hero: 24px;
+  --dh-radius-card: 16px;
+  --dh-radius-sm: 10px;
+  --dh-radius-pill: 9999px;
+
+  --dh-header-h: 64px;
+  --dh-header-h-mobile: 56px;
+  --dh-footer-h: 72px;
+
+  --dh-font-display: "Songti SC", "SimSun", "STSong", serif;
+  --dh-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+}

@@ -2,9 +2,29 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="ico/favicon.png" />
+    <link rel="icon" href="/ico/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>今日热榜 - 汇聚全网热点，热门尽览无余</title>
+    <meta name="theme-color" content="#FFF8F4" />
+    <script>
+      (function () {
+        try {
+          var d = localStorage.getItem("mainData");
+          var theme = "light";
+          if (d) {
+            var parsed = JSON.parse(d);
+            if (parsed.siteThemeAuto) {
+              theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            } else if (parsed.siteTheme) {
+              theme = parsed.siteTheme;
+            }
+          }
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

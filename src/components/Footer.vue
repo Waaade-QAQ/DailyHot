@@ -1,67 +1,74 @@
 <template>
-  <footer>
-    <div class="copyright">
-      <n-text class="description" v-html="packageJson.description" />
+  <footer class="dh-footer">
+    <div class="footer-inner">
+      <div class="copyright">
+        <n-text class="description" v-html="packageJson.description" />
+        <n-text
+          class="author"
+          :depth="3"
+          v-html="packageJson.author"
+          @click="jumpLink(packageJson.github)"
+        />
+      </div>
       <n-text
-        class="author"
+        v-if="icp"
         :depth="3"
-        v-html="packageJson.author"
-        @click="jumpLink(packageJson.github)"
+        class="icp"
+        v-html="icp"
+        @click="jumpLink('https://beian.miit.gov.cn/')"
       />
     </div>
-    <n-text
-      v-if="icp"
-      :depth="3"
-      class="icp"
-      v-html="icp"
-      @click="jumpLink('https://beian.miit.gov.cn/')"
-    />
   </footer>
 </template>
 
 <script setup>
 import packageJson from "@/../package.json";
 
-const icp = ref(import.meta.env.VITE_ICP ? import.meta.env.VITE_ICP : null);
+const icp = ref(import.meta.env.VITE_ICP || null);
 
-// 链接跳转
 const jumpLink = (url) => {
-  window.open(url);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
 };
 </script>
 
 <style lang="scss" scoped>
-footer {
-  height: 100px;
-  padding: 0 5vw;
-  max-width: 1800px;
-  margin: 20px auto 0;
+.dh-footer {
+  height: var(--dh-footer-h);
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  margin-top: 24px;
+  background-color: transparent;
+
+  .footer-inner {
+    max-width: 1360px;
+    width: 100%;
+    padding: 0 clamp(16px, 4vw, 48px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
   .copyright {
-    margin-bottom: 4px;
-    .description {
-      &::after {
-        content: "@ Copyright By";
-        margin: 0 6px;
-      }
-    }
-  }
-  .author {
-    cursor: pointer;
-    transition: all 0.3s;
-    &:hover {
-      color: var(--n-code-text-color);
-    }
-  }
-  .icp {
+    display: flex;
+    align-items: center;
     font-size: 13px;
+    .description::after {
+      content: "@ Copyright By";
+      margin: 0 6px;
+    }
+  }
+
+  .author,
+  .icp {
     cursor: pointer;
-    transition: all 0.3s;
+    font-size: 12px;
+    transition: color 0.2s;
     &:hover {
-      color: var(--n-code-text-color);
+      color: var(--dh-brand);
     }
   }
 }

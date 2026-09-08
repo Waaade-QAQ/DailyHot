@@ -1,393 +1,174 @@
 <template>
-  <div class="list">
-    <n-space class="type" v-if="store.newsArr[0]">
-      <n-tag
-        round
-        size="large"
-        class="tag"
-        v-for="item in store.newsArr.filter((item) => item.show)"
-        :key="item"
-        :type="item.name === listType ? 'primary' : 'default'"
-        @click="changeType(item.name)"
-      >
-        {{ item.label }}
-        <template #avatar>
-          <img :src="`/logo/${item.name}.png`" alt="logo" class="logo" />
-        </template>
-      </n-tag>
-    </n-space>
-    <n-card class="card">
-      <template #header>
-        <Transition name="fade" mode="out-in">
-          <template v-if="!listData">
-            <div class="loading" style="height: 60px">
-              <n-skeleton text round height="40px" />
-            </div>
-          </template>
-          <template v-else>
-            <div class="header">
-              <div class="logo">
-                <img :src="`/logo/${listType}.png`" alt="logo" />
-              </div>
-              <div class="name">
-                <n-text class="title">{{ listData.title }}</n-text>
-                <n-text class="subtitle" :depth="3">
-                  {{ listData.subtitle }}
-                </n-text>
-              </div>
-              <div class="data">
-                <n-text
-                  v-if="listData.total"
-                  :depth="3"
-                  class="total"
-                  v-html="listData.total"
-                />
-                <n-text :depth="3" class="time" v-html="updateTime" />
-              </div>
-            </div>
-          </template>
-        </Transition>
-      </template>
-      <Transition name="fade" mode="out-in">
-        <template v-if="!listData">
-          <div class="loading" style="flex-direction: column">
-            <n-skeleton
-              text
-              round
-              :repeat="20"
-              height="40px"
-              style="margin-bottom: 20px"
-            />
+  <div class="list-page">
+    <ListCategoryChips
+      :categories="sortedNewsArr"
+      :current-type="listType"
+      @change="changeType"
+    />
+
+    <div class="list-card">
+      <div class="card-header" v-if="listData">
+        <div class="platform-meta">
+          <div class="logo-box">
+            <img :src="`/logo/${listType}.png`" :alt="listData.title" class="logo" />
           </div>
-        </template>
-        <template v-else>
-          <div class="all">
-            <n-list hoverable clickable style="width: 100%">
-              <n-list-item
-                v-for="(item, index) in listData.data.slice(
-                  pageNumber * 20 - 20,
-                  pageNumber * 20
-                )"
-                :key="item"
-                @click="jumpLink(item)"
-              >
-                <template #prefix>
-                  <n-text
-                    class="num"
-                    :class="
-                      index + 1 + (pageNumber - 1) * 20 === 1
-                        ? 'one'
-                        : index + 1 + (pageNumber - 1) * 20 === 2
-                        ? 'two'
-                        : index + 1 + (pageNumber - 1) * 20 === 3
-                        ? 'three'
-                        : null
-                    "
-                    :depth="2"
-                  >
-                    {{ index + 1 + (pageNumber - 1) * 20 }}
-                  </n-text>
-                </template>
-                <div class="text">
-                  <n-text class="title" v-html="item.title" />
-                  <n-text
-                    v-if="item.desc"
-                    class="desc"
-                    :depth="3"
-                    v-html="item.desc"
-                  />
-                </div>
-                <div class="message">
-                  <div class="hot" v-if="item.hot">
-                    <n-icon :depth="3" :component="Fire" />
-                    <n-text class="hot-text" :depth="3" v-html="item.hot" />
-                  </div>
-                </div>
-              </n-list-item>
-            </n-list>
-            <n-pagination
-              class="pagination"
-              :page-slot="5"
-              :item-count="listData.data.length"
-              :page-sizes="[20]"
-              v-model:page="pageNumber"
-            />
+          <div class="title-wrap">
+            <div class="title-row">
+              <h1 class="main-title">{{ listData.title }}</h1>
+              <span v-if="listData.total" class="total-badge">共 {{ listData.total }}</span>
+            </div>
           </div>
-        </template>
-      </Transition>
-    </n-card>
+        </div>
+        <span class="time-text">{{ updateTime || '更新中...' }}</span>
+      </div>
+
+      <div v-if="loading" class="skeleton-wrap">
+        <n-skeleton v-for="i in 10" :key="i" height="48px" round style="margin-bottom: 8px" />
+      </div>
+      <div v-else-if="listData?.data" class="list-content">
+        <RankRow
+          v-for="(item, index) in currentPageData"
+          :key="item.url || index"
+          :rank="index + 1 + (pageNumber - 1) * 20"
+          :item="item"
+          variant="list"
+          :max-hot="maxHot"
+        />
+        <div class="pagination-bar">
+          <n-pagination
+            :page-slot="5"
+            :item-count="listData.data.length"
+            :page-size="20"
+            v-model:page="pageNumber"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { Fire } from "@icon-park/vue-next";
+import { ref, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { mainStore } from "@/store";
-import { useRouter } from "vue-router";
-import { formatTime } from "@/utils/getTime";
 import { getHotLists } from "@/api";
+import { formatTime } from "@/utils/getTime";
+import { hotMax } from "@/utils/boardFormat";
+import RankRow from "@/components/RankRow.vue";
+import ListCategoryChips from "@/components/ListCategoryChips.vue";
 
+const route = useRoute();
 const router = useRouter();
 const store = mainStore();
 
-const updateTime = ref(null);
-const listType = ref(
-  router.currentRoute.value.query.type || store.newsArr[0].name
-);
-const pageNumber = ref(
-  router.currentRoute.value.query.page
-    ? Number(router.currentRoute.value.query.page)
-    : 1
-);
+const listType = ref(route.query.type || "douyin-parenting");
+const pageNumber = ref(Number(route.query.page) || 1);
 const listData = ref(null);
+const loading = ref(false);
+const updateTime = ref("");
 
-// 获取热榜数据
-const getHotListsData = async (name, isNew = false) => {
-  listData.value = null;
-  const item = store.newsArr.find((item) => item.name == name)
-  getHotLists(item.name, isNew, item.params).then((res) => {
-    console.log(res);
-    if (res.code === 200) {
-      listData.value = res;
-    } else {
-      $message.error(res.message);
-    }
-  });
-};
-
-// 链接跳转
-const jumpLink = (data) => {
-  if (!data.url || !data.mobileUrl) return $message.error("链接不存在");
-  const url = window.innerWidth > 680 ? data.url : data.mobileUrl;
-  if (store.linkOpenType === "open") {
-    window.open(url, "_blank");
-  } else if (store.linkOpenType === "href") {
-    window.location.href = url;
-  }
-};
-
-// 切换类别
-const changeType = (type) => {
-  router.push({
-    path: "/list",
-    query: {
-      type,
-      page: 1,
-    },
-  });
-};
-
-// 实时改变更新时间
-watch(
-  () => store.timeData,
-  () => {
-    if (listData.value) {
-      updateTime.value = formatTime(listData.value.updateTime);
-    }
-  }
-);
-
-// 页数变化
-watch(
-  () => pageNumber.value,
-  (val) => {
-    router.push({
-      path: "/list",
-      query: {
-        type: listType.value,
-        page: val,
-      },
-    });
-    document.querySelector(".n-back-top")?.click();
-  }
-);
-
-// 类别变化
-watch(
-  () => router.currentRoute.value,
-  (val) => {
-    if (val.name === "list") {
-      listType.value = val.query.type;
-      pageNumber.value = Number(val.query.page);
-      getHotListsData(listType.value);
-    }
-  }
-);
-
-onMounted(() => {
-  getHotListsData(listType.value);
+const sortedNewsArr = computed(() => {
+  const visible = store.newsArr.filter((i) => i.show);
+  const parenting = visible.filter((i) => i.name === "douyin-parenting");
+  const rest = visible.filter((i) => i.name !== "douyin-parenting");
+  return [...parenting, ...rest];
 });
+
+const currentPageData = computed(() => {
+  if (!listData.value?.data) return [];
+  const start = (pageNumber.value - 1) * 20;
+  return listData.value.data.slice(start, start + 20);
+});
+
+const maxHot = computed(() => hotMax(currentPageData.value));
+
+const fetchListData = async (type, isNew = false) => {
+  loading.value = true;
+  listData.value = null;
+  const item = store.newsArr.find((i) => i.name === type) || { name: type };
+  try {
+    const res = await getHotLists(item.name, isNew, item.params);
+    if (res?.code === 200) {
+      listData.value = res;
+      updateTime.value = formatTime(res.updateTime);
+    } else if (window.$message) {
+      window.$message.error(res?.message || "获取列表失败");
+    }
+  } catch (e) {
+    if (window.$message) window.$message.error("获取列表异常");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const changeType = (type) => {
+  if (type === listType.value) return;
+  listType.value = type;
+  pageNumber.value = 1;
+  router.push({ path: "/list", query: { type, page: 1 } });
+};
+
+watch(() => route.query.type, (newType) => {
+  if (newType && newType !== listType.value) {
+    listType.value = newType;
+    pageNumber.value = Number(route.query.page) || 1;
+    fetchListData(newType);
+  }
+});
+
+watch(() => pageNumber.value, (newPage) => {
+  router.push({ path: "/list", query: { type: listType.value, page: newPage } });
+  document.querySelector(".n-back-top")?.click();
+});
+
+watch(() => store.timeData, () => {
+  if (listData.value?.updateTime) updateTime.value = formatTime(listData.value.updateTime);
+});
+
+fetchListData(listType.value);
 </script>
 
 <style lang="scss" scoped>
-.list {
-  .type {
-    width: 100%;
-    .tag {
-      cursor: pointer;
-      .logo {
-        height: 22px;
-        width: 22px;
-        margin-left: 6px;
-      }
-    }
-  }
-  .card {
-    margin-top: 20px;
-    border-radius: 8px;
-    .fade-enter-active,
-    .fade-leave-active {
-      transition: opacity 0.3s ease-in-out;
-    }
+.list-page {
+  padding-bottom: 32px;
 
-    .fade-enter-from,
-    .fade-leave-to {
-      opacity: 0;
-    }
-    .loading {
+  .list-card {
+    background-color: var(--dh-bg-surface);
+    border: 1px solid var(--dh-border-hairline);
+    border-radius: var(--dh-radius-card);
+    box-shadow: var(--dh-shadow-sm);
+    padding: 24px 28px;
+
+    .card-header {
       display: flex;
-      align-items: center;
-    }
-    :deep(.n-card__content) {
-      @media (max-width: 740px) {
-        padding: 0 12px 12px 12px;
-      }
-    }
-    .header {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
       align-items: center;
       justify-content: space-between;
-      height: 60px;
-      .logo {
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--dh-border-hairline);
+      margin-bottom: 12px;
+
+      .platform-meta {
         display: flex;
         align-items: center;
-        img {
-          height: 50px;
-          width: 50px;
+        gap: 12px;
+        .logo-box {
+          width: 38px; height: 38px; border-radius: 10px;
+          background-color: var(--dh-bg-overlay);
+          display: flex; align-items: center; justify-content: center;
+          .logo { width: 26px; height: 26px; object-fit: contain; }
+        }
+        .title-row {
+          display: flex; align-items: center; gap: 8px;
+          .main-title { font-size: 20px; font-weight: 700; color: var(--dh-text-main); }
+          .total-badge { font-size: 12px; color: var(--dh-text-muted); }
         }
       }
-      .name {
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-        .title {
-          font-size: 22px;
-          font-weight: bold;
-        }
-        .subtitle {
-          font-size: 14px;
-        }
-      }
-      .data {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        font-size: 14px;
-        .total {
-          &::before {
-            content: "共 ";
-          }
-          &::after {
-            content: " 条 ·";
-            margin-right: 6px;
-          }
-        }
-      }
-      @media (max-width: 740px) {
-        display: flex;
-        justify-content: flex-start;
-        .logo {
-          img {
-            width: 32px;
-            height: 32px;
-          }
-        }
-        .name {
-          margin-left: 12px;
-          align-items: flex-end;
-          flex-direction: row;
-          .subtitle {
-            margin-bottom: 3px;
-            margin-left: 8px;
-          }
-        }
-        .data {
-          margin-left: auto;
-        }
-      }
+      .time-text { font-size: 12px; color: var(--dh-text-muted); }
     }
-    .all {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      .num {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        margin-right: 8px;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--n-border-color);
-        border-radius: 8px;
-        transition: all 0.3s;
-        &:hover {
-          background-color: var(--n-close-color-hover);
-        }
-        &.one {
-          background-color: #ea444d;
-          color: #fff;
-        }
-        &.two {
-          background-color: #ed702d;
-          color: #fff;
-        }
-        &.three {
-          background-color: #eead3f;
-          color: #fff;
-        }
-      }
-      .text {
-        display: flex;
-        flex-direction: column;
-        .title {
-          font-size: 16px;
-          margin-bottom: 4px;
-        }
-        .desc {
-          overflow: hidden;
-          font-size: 14px;
-          display: -webkit-inline-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 5;
-        }
-      }
-      .message {
-        display: flex;
-        align-items: center;
-        margin-top: 12px;
-        .hot {
-          display: flex;
-          align-items: center;
-          font-size: 13px;
-          .hot-text {
-            margin-left: 4px;
-            line-height: 0;
-          }
-        }
-      }
-      .pagination {
-        margin: 20px 0;
-      }
-      @media (max-width: 740px) {
-        :deep(.n-list-item) {
-          padding: 12px 10px;
-          .n-list-item__prefix {
-            margin-right: 12px;
-          }
-        }
-      }
+
+    .skeleton-wrap { padding: 12px 0; }
+    .pagination-bar {
+      display: flex; justify-content: center; margin-top: 24px; padding-top: 16px;
     }
   }
 }

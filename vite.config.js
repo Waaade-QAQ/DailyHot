@@ -56,8 +56,8 @@ export default defineConfig(({ mode }) => {
           description: "汇聚全网热点，热门尽览无余",
           display: "standalone",
           start_url: "/",
-          theme_color: "#fff",
-          background_color: "#efefef",
+          theme_color: "#FFF8F4",
+          background_color: "#FFF8F4",
           icons: [
             {
               src: "/ico/favicon.png",
