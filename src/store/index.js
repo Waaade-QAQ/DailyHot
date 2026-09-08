@@ -27,9 +27,15 @@ export const mainStore = defineStore("mainData", {
           show: true,
         },
         {
+          label: "抖音亲子",
+          name: "douyin-parenting",
+          order: 3,
+          show: true,
+        },
+        {
           label: "知乎",
           name: "zhihu",
-          order: 3,
+          order: 4,
           show: true,
         },
         {
