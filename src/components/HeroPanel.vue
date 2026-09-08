@@ -5,7 +5,7 @@
       <div class="eyebrow">
         <span class="red-mark" />
         <span class="label">抖音亲子日刊</span>
-        <span class="meta" v-if="updateTime">共 {{ hotListData?.data?.length || 0 }} 条 · {{ updateTime }}</span>
+        <span class="meta" v-if="updateTime">共 {{ total }} 条 · {{ updateTime }}</span>
       </div>
       <div class="headline-bar">
         <div class="headline">
@@ -23,28 +23,41 @@
       </div>
     </div>
 
-    <!-- 列表内容 -->
+    <!-- 加载/错误状态 -->
     <div v-if="loadingError" class="state-box">
       <n-result size="small" status="500" title="热榜加载失败" description="请检查网络连接后重试" />
       <n-button secondary round size="small" @click="fetchData(true)">重试</n-button>
     </div>
-    <div v-else-if="listLoading && !items.length" class="hero-grid">
-      <n-skeleton v-for="i in 12" :key="i" height="38px" round />
+    <div v-else-if="listLoading && !total" class="skeleton-wrap">
+      <div class="skeleton-col" v-for="i in 2" :key="i">
+        <n-skeleton v-for="j in 7" :key="j" height="30px" round style="margin-bottom: 6px" />
+      </div>
     </div>
-    <div v-else class="hero-grid">
-      <RankRow
-        v-for="(item, index) in items"
-        :key="item.url || index"
-        :rank="index + 1"
-        :item="item"
-        variant="hero"
+
+    <!-- 双分栏榜单：左 创作热点 / 右 亲子话题 -->
+    <div v-else class="sections">
+      <HeroBoardColumn
+        title="创作热点"
+        :subtitle="`上升热点 · ${spots.length} 条`"
+        :rows="spotsShow"
         :max-hot="maxHot"
+        :show-more="spots.length > HERO_SHOW"
+        @more="goGroup('spot')"
+      />
+      <HeroBoardColumn
+        title="亲子话题"
+        :subtitle="`近 24h 播放 · ${topics.length} 条`"
+        :rows="topicsShow"
+        :max-hot="maxHot"
+        :show-more="topics.length > HERO_SHOW"
+        empty-text="暂无话题数据"
+        @more="goGroup('topic')"
       />
     </div>
 
     <!-- 底部跳转更多 -->
     <div class="panel-footer">
-      <n-button text class="more-link" @click="goList(router, 'douyin-parenting')">
+      <n-button text class="more-link" @click="goGroup('all')">
         查看完整榜单 <span class="arrow">→</span>
       </n-button>
     </div>
@@ -52,13 +65,13 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Refresh } from "@icon-park/vue-next";
 import { useHotList } from "@/composables/useHotList";
-import { goList } from "@/utils/link";
-import RankRow from "@/components/RankRow.vue";
+import HeroBoardColumn from "@/components/HeroBoardColumn.vue";
 
+const HERO_SHOW = 8;
 const router = useRouter();
 const {
   hotListData,
@@ -70,7 +83,24 @@ const {
   fetchData,
   getNewData,
   initObserver,
-} = useHotList("douyin-parenting", { limit: 12 });
+} = useHotList("douyin-parenting");
+
+const total = computed(() => hotListData.value?.data?.length || 0);
+
+const spots = computed(() =>
+  items.value.filter((i) => !i.kind || i.kind === "spot"),
+);
+const topics = computed(() => items.value.filter((i) => i.kind === "topic"));
+
+const spotsShow = computed(() => spots.value.slice(0, HERO_SHOW));
+const topicsShow = computed(() => topics.value.slice(0, HERO_SHOW));
+
+const goGroup = (group) => {
+  router.push({
+    path: "/list",
+    query: { type: "douyin-parenting", group },
+  });
+};
 
 onMounted(() => initObserver("hot-list-douyin-parenting"));
 </script>
@@ -81,19 +111,19 @@ onMounted(() => initObserver("hot-list-douyin-parenting"));
   border: 1px solid var(--dh-border-subtle);
   border-radius: var(--dh-radius-hero);
   box-shadow: var(--dh-shadow-md);
-  padding: 24px 30px 18px;
+  padding: 20px 24px 14px;
   margin-bottom: 28px;
   transition: background-color 0.25s, border-color 0.25s;
 
   .masthead {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     border-bottom: 1px solid var(--dh-border-subtle);
-    padding-bottom: 14px;
+    padding-bottom: 12px;
     .eyebrow {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       .red-mark { width: 8px; height: 8px; border-radius: 2px; background-color: var(--dh-brand); }
       .label { font-size: 13px; font-weight: 700; color: var(--dh-text-main); }
       .meta { font-size: 12px; color: var(--dh-text-secondary); }
@@ -103,20 +133,14 @@ onMounted(() => initObserver("hot-list-douyin-parenting"));
       align-items: center;
       justify-content: space-between;
       .title {
-        font-size: 34px; font-weight: 800; color: var(--dh-text-main); line-height: 1.2;
+        font-size: 32px; font-weight: 800; color: var(--dh-text-main); line-height: 1.2;
         .accent { color: var(--dh-brand); }
       }
     }
   }
 
-  .hero-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 4px;
-    @media (min-width: 860px) {
-      grid-template-columns: repeat(2, 1fr);
-      column-gap: 28px;
-    }
+  .hero-refresh {
+    background-color: var(--dh-bg-surface) !important;
   }
 
   .state-box {
@@ -127,14 +151,25 @@ onMounted(() => initObserver("hot-list-douyin-parenting"));
     gap: 12px;
   }
 
-  .hero-refresh {
-    background-color: var(--dh-bg-surface) !important;
+  .skeleton-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 6px 0;
+    @media (max-width: 900px) { grid-template-columns: 1fr; }
+  }
+
+  .sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 28px;
+    @media (max-width: 900px) { grid-template-columns: 1fr; }
   }
 
   .panel-footer {
     display: flex;
     justify-content: center;
-    padding-top: 14px;
+    padding-top: 10px;
     margin-top: 10px;
     border-top: 1px solid var(--dh-border-subtle);
     .more-link {
@@ -145,7 +180,7 @@ onMounted(() => initObserver("hot-list-douyin-parenting"));
   }
 
   @media (max-width: 768px) {
-    padding: 16px 18px 14px;
+    padding: 16px 16px 12px;
     border-radius: 18px;
     margin-bottom: 18px;
     .masthead .headline-bar .title { font-size: 26px; }

@@ -3,9 +3,7 @@
     <!-- 头部平台信息 -->
     <div class="card-header" @click="toList">
       <div class="platform-info">
-        <div class="logo-box">
-          <img :src="`/logo/${hotData.name}.png`" :alt="hotData.label" class="logo-img" />
-        </div>
+        <LogoMark :name="hotData.name" :label="hotData.label" :size="24" :radius="8" />
         <span class="platform-name">{{ hotData.label }}</span>
       </div>
       <span class="subtitle" v-if="hotListData?.type">{{ hotListData.type }}</span>
@@ -66,6 +64,7 @@ import { Refresh, More } from "@icon-park/vue-next";
 import { useHotList } from "@/composables/useHotList";
 import { goList } from "@/utils/link";
 import RankRow from "@/components/RankRow.vue";
+import LogoMark from "@/components/LogoMark.vue";
 
 const props = defineProps({
   hotData: { type: Object, required: true },
@@ -117,23 +116,6 @@ onMounted(() => initObserver(`hot-list-${props.hotData.name}`));
       display: flex;
       align-items: center;
       gap: 8px;
-
-      .logo-box {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-        background-color: var(--dh-bg-overlay);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-
-        .logo-img {
-          width: 20px;
-          height: 20px;
-          object-fit: contain;
-        }
-      }
 
       .platform-name {
         font-size: 15px;

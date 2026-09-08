@@ -23,11 +23,8 @@
       <template #item="{ element }">
         <div class="board-item-card" :class="{ disabled: !element.show }">
           <div class="drag-info">
-            <div class="logo-box">
-              <img :src="`/logo/${element.name}.png`" :alt="element.label" class="logo" />
-            </div>
+            <LogoMark :name="element.name" :label="element.label" :size="24" :radius="7" />
             <span class="label">{{ element.label }}</span>
-            <span v-if="element.name === 'douyin-parenting'" class="hero-chip">主榜</span>
           </div>
           <n-switch
             size="small"
@@ -42,6 +39,7 @@
 
 <script setup>
 import draggable from "vuedraggable";
+import LogoMark from "@/components/LogoMark.vue";
 
 const props = defineProps({
   newsArr: { type: Array, required: true },
@@ -115,17 +113,7 @@ const onToggle = (label, val) => {
         display: flex;
         align-items: center;
         gap: 8px;
-        .logo-box {
-          width: 26px; height: 26px; border-radius: 6px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(255, 255, 255, 0.4);
-          .logo { width: 18px; height: 18px; object-fit: contain; }
-        }
         .label { font-size: 13px; font-weight: 500; color: var(--dh-text-main); }
-        .hero-chip {
-          font-size: 10px; padding: 1px 4px; border-radius: 4px;
-          background-color: var(--dh-brand); color: #fff;
-        }
       }
     }
   }

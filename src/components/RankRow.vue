@@ -5,39 +5,46 @@
     @click="handleClick"
   >
     <RankBadge :rank="rank" :variant="variant" />
+    <img
+      v-if="showThumb"
+      :src="item.cover"
+      alt=""
+      class="row-thumb"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      @error="thumbFailed = true"
+    />
     <div class="main-col">
       <span
         class="title"
         :style="{ fontSize: rowFontSize }"
-        v-html="item.title"
-      />
+      >
+        <span v-if="isTopic" class="hash-mark">#</span
+        ><span v-html="item.title" />
+      </span>
       <span
         v-if="variant === 'list' && item.desc"
         class="desc"
         v-html="item.desc"
       />
     </div>
-    <div
+    <span v-if="kindChip" class="kind-chip" :class="`kind-${item.kind}`">{{
+      kindChip
+    }}</span>
+    <RankHeat
       v-if="showHeat && maxHot > 0"
-      class="heat-col"
-      :class="{ 'has-bar': variant === 'hero' }"
-    >
-      <span class="hot-text">{{ formattedHot }}</span>
-      <div v-if="variant === 'hero'" class="heat-bar-track">
-        <div
-          class="heat-bar-fill"
-          :class="{ 'top-tier': rank <= 3 }"
-          :style="{ width: heatWidth + '%' }"
-        />
-      </div>
-    </div>
+      :hot="item.hot"
+      :max-hot="maxHot"
+      :rank="rank"
+      :variant="variant"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import RankBadge from "@/components/RankBadge.vue";
-import { formatHot, heatPct } from "@/utils/boardFormat";
+import RankHeat from "@/components/RankHeat.vue";
 import { openHotLink } from "@/utils/link";
 import { mainStore } from "@/store";
 
@@ -53,14 +60,27 @@ const props = defineProps({
 const emit = defineEmits(["open"]);
 const store = mainStore();
 
+const thumbFailed = ref(false);
+const isTopic = computed(() => props.item?.kind === "topic");
+
+const showThumb = computed(
+  () =>
+    props.variant === "hero" &&
+    !isTopic.value &&
+    props.item?.cover &&
+    !thumbFailed.value,
+);
+
+const kindChip = computed(() => {
+  if (props.variant !== "list" || !props.item?.kind) return "";
+  return props.item.kind === "topic" ? "话题" : "热点";
+});
+
 const rowFontSize = computed(() => {
   if (props.fontSize > 0) return `${props.fontSize}px`;
   const base = store.listFontSize || 16;
   return props.variant === "hero" ? `${base + 2}px` : `${base}px`;
 });
-
-const formattedHot = computed(() => formatHot(props.item?.hot));
-const heatWidth = computed(() => heatPct(props.item?.hot, props.maxHot));
 
 const handleClick = () => {
   emit("open", props.item);
@@ -76,6 +96,16 @@ const handleClick = () => {
   border-radius: 8px;
   transition: background-color 0.15s, color 0.15s;
 
+  .row-thumb {
+    width: 24px;
+    height: 32px;
+    border-radius: 5px;
+    object-fit: cover;
+    flex-shrink: 0;
+    margin-left: 8px;
+    background-color: var(--dh-bg-overlay);
+  }
+
   .main-col {
     flex: 1;
     min-width: 0;
@@ -90,50 +120,34 @@ const handleClick = () => {
       color: var(--dh-text-main);
       font-weight: 500;
       transition: color 0.15s;
+
+      .hash-mark {
+        color: var(--dh-text-muted);
+        font-weight: 600;
+        margin-right: 2px;
+      }
     }
+  }
+
+  .kind-chip {
+    flex-shrink: 0;
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: rgba(254, 44, 85, 0.1);
+    color: var(--dh-brand);
   }
 
   &:hover .main-col .title {
     color: var(--dh-brand);
   }
 
-  .heat-col {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    margin-left: 12px;
-
-    .hot-text {
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-      color: var(--dh-text-muted);
-      text-align: right;
-    }
-
-    .heat-bar-track {
-      width: 48px;
-      height: 4px;
-      background-color: var(--dh-heat-track);
-      border-radius: 2px;
-      overflow: hidden;
-
-      .heat-bar-fill {
-        height: 100%;
-        background-color: var(--dh-rank-coral);
-        border-radius: 2px;
-        transition: width 0.3s ease;
-
-        &.top-tier {
-          background-color: var(--dh-brand);
-        }
-      }
-    }
-  }
-
   &.variant-hero {
-    min-height: 42px;
-    padding: 6px 12px;
+    min-height: 36px;
+    padding: 2px 10px;
     border-radius: 10px;
     border: 1px solid transparent;
 
@@ -142,9 +156,7 @@ const handleClick = () => {
       background-color: var(--dh-heat-track);
     }
 
-    .heat-col .hot-text {
-      color: var(--dh-text-secondary);
-    }
+    .main-col { margin-left: 8px; }
   }
 
   &.variant-card {
@@ -158,10 +170,6 @@ const handleClick = () => {
 
     .main-col {
       margin-left: 8px;
-    }
-
-    .heat-col .hot-text {
-      font-size: 11px;
     }
   }
 

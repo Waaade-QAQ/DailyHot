@@ -7,20 +7,20 @@
     />
 
     <div class="list-card">
-      <div class="card-header" v-if="listData">
-        <div class="platform-meta">
-          <div class="logo-box">
-            <img :src="`/logo/${listType}.png`" :alt="listData.title" class="logo" />
-          </div>
-          <div class="title-wrap">
-            <div class="title-row">
-              <h1 class="main-title">{{ listData.title }}</h1>
-              <span v-if="listData.total" class="total-badge">共 {{ listData.total }}</span>
-            </div>
-          </div>
-        </div>
-        <span class="time-text">{{ updateTime || '更新中...' }}</span>
-      </div>
+      <ListHeader
+        v-if="listData"
+        :name="listType"
+        :title="listData.title"
+        :total="listData.total"
+        :update-text="updateTime"
+      />
+
+      <GroupTabs
+        v-if="isParentingList && hasKind"
+        :options="groupOptions"
+        :current="groupKind"
+        @change="changeGroup"
+      />
 
       <div v-if="loading" class="skeleton-wrap">
         <n-skeleton v-for="i in 10" :key="i" height="48px" round style="margin-bottom: 8px" />
@@ -28,17 +28,17 @@
       <div v-else-if="listData?.data" class="list-content">
         <RankRow
           v-for="(item, index) in currentPageData"
-          :key="item.url || index"
-          :rank="index + 1 + (pageNumber - 1) * 20"
+          :key="`${item.kind || 'x'}-${item.id || index}`"
+          :rank="index + 1 + (pageNumber - 1) * PAGE_SIZE"
           :item="item"
           variant="list"
           :max-hot="maxHot"
         />
-        <div class="pagination-bar">
+        <div class="pagination-bar" v-if="groupRows.length > PAGE_SIZE">
           <n-pagination
             :page-slot="5"
-            :item-count="listData.data.length"
-            :page-size="20"
+            :item-count="groupRows.length"
+            :page-size="PAGE_SIZE"
             v-model:page="pageNumber"
           />
         </div>
@@ -56,16 +56,29 @@ import { formatTime } from "@/utils/getTime";
 import { hotMax } from "@/utils/boardFormat";
 import RankRow from "@/components/RankRow.vue";
 import ListCategoryChips from "@/components/ListCategoryChips.vue";
+import ListHeader from "@/components/ListHeader.vue";
+import GroupTabs from "@/components/GroupTabs.vue";
 
+const PAGE_SIZE = 20;
 const route = useRoute();
 const router = useRouter();
 const store = mainStore();
 
 const listType = ref(route.query.type || "douyin-parenting");
 const pageNumber = ref(Number(route.query.page) || 1);
+const groupKind = ref(["spot", "topic"].includes(route.query.group) ? route.query.group : "all");
 const listData = ref(null);
 const loading = ref(false);
 const updateTime = ref("");
+
+const groupOptions = [
+  { label: "全部", value: "all" },
+  { label: "创作热点", value: "spot" },
+  { label: "亲子话题", value: "topic" },
+];
+
+const isParentingList = computed(() => listType.value === "douyin-parenting");
+const hasKind = computed(() => listData.value?.data?.some((i) => i.kind));
 
 const sortedNewsArr = computed(() => {
   const visible = store.newsArr.filter((i) => i.show);
@@ -74,13 +87,29 @@ const sortedNewsArr = computed(() => {
   return [...parenting, ...rest];
 });
 
+const groupRows = computed(() => {
+  const all = listData.value?.data || [];
+  if (groupKind.value === "topic") return all.filter((i) => i.kind === "topic");
+  if (groupKind.value === "spot") return all.filter((i) => !i.kind || i.kind === "spot");
+  return all;
+});
+
 const currentPageData = computed(() => {
-  if (!listData.value?.data) return [];
-  const start = (pageNumber.value - 1) * 20;
-  return listData.value.data.slice(start, start + 20);
+  const start = (pageNumber.value - 1) * PAGE_SIZE;
+  return groupRows.value.slice(start, start + PAGE_SIZE);
 });
 
 const maxHot = computed(() => hotMax(currentPageData.value));
+
+const pushQuery = (extra = {}) => {
+  const query = {
+    type: listType.value,
+    page: pageNumber.value,
+    ...(groupKind.value !== "all" ? { group: groupKind.value } : {}),
+    ...extra,
+  };
+  router.push({ path: "/list", query });
+};
 
 const fetchListData = async (type, isNew = false) => {
   loading.value = true;
@@ -104,34 +133,59 @@ const fetchListData = async (type, isNew = false) => {
 const changeType = (type) => {
   if (type === listType.value) return;
   listType.value = type;
+  groupKind.value = "all";
   pageNumber.value = 1;
-  router.push({ path: "/list", query: { type, page: 1 } });
+  fetchListData(type);
+  pushQuery();
 };
 
-watch(() => route.query.type, (newType) => {
-  if (newType && newType !== listType.value) {
-    listType.value = newType;
-    pageNumber.value = Number(route.query.page) || 1;
-    fetchListData(newType);
-  }
-});
+const changeGroup = (group) => {
+  if (group === groupKind.value) return;
+  groupKind.value = group;
+  pageNumber.value = 1;
+  pushQuery();
+};
 
-watch(() => pageNumber.value, (newPage) => {
-  router.push({ path: "/list", query: { type: listType.value, page: newPage } });
+watch(
+  () => route.query.type,
+  (newType) => {
+    if (newType && newType !== listType.value) {
+      listType.value = newType;
+      groupKind.value = "all";
+      pageNumber.value = Number(route.query.page) || 1;
+      fetchListData(newType);
+    }
+  }
+);
+
+watch(
+  () => route.query.group,
+  (group) => {
+    const next = ["spot", "topic"].includes(group) ? group : "all";
+    if (next !== groupKind.value && listType.value === "douyin-parenting") {
+      groupKind.value = next;
+      pageNumber.value = 1;
+    }
+  }
+);
+
+watch(pageNumber, () => {
+  pushQuery();
   document.querySelector(".n-back-top")?.click();
 });
 
-watch(() => store.timeData, () => {
-  if (listData.value?.updateTime) updateTime.value = formatTime(listData.value.updateTime);
-});
+watch(
+  () => store.timeData,
+  () => {
+    if (listData.value?.updateTime) updateTime.value = formatTime(listData.value.updateTime);
+  }
+);
 
 fetchListData(listType.value);
 </script>
 
 <style lang="scss" scoped>
-.list-page {
-  padding-bottom: 32px;
-
+.list-page { padding-bottom: 32px;
   .list-card {
     background-color: var(--dh-bg-surface);
     border: 1px solid var(--dh-border-hairline);
@@ -139,37 +193,8 @@ fetchListData(listType.value);
     box-shadow: var(--dh-shadow-sm);
     padding: 24px 28px;
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 18px;
-      border-bottom: 1px solid var(--dh-border-hairline);
-      margin-bottom: 12px;
-
-      .platform-meta {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        .logo-box {
-          width: 38px; height: 38px; border-radius: 10px;
-          background-color: var(--dh-bg-overlay);
-          display: flex; align-items: center; justify-content: center;
-          .logo { width: 26px; height: 26px; object-fit: contain; }
-        }
-        .title-row {
-          display: flex; align-items: center; gap: 8px;
-          .main-title { font-size: 20px; font-weight: 700; color: var(--dh-text-main); }
-          .total-badge { font-size: 12px; color: var(--dh-text-muted); }
-        }
-      }
-      .time-text { font-size: 12px; color: var(--dh-text-muted); }
-    }
-
     .skeleton-wrap { padding: 12px 0; }
-    .pagination-bar {
-      display: flex; justify-content: center; margin-top: 24px; padding-top: 16px;
-    }
+    .pagination-bar { display: flex; justify-content: center; margin: 24px 0 0; padding-top: 16px; }
   }
 }
 </style>

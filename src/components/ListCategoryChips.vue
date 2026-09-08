@@ -10,7 +10,13 @@
       }"
       @click="emit('change', item.name)"
     >
-      <img :src="`/logo/${item.name}.png`" :alt="item.label" class="chip-icon" />
+      <LogoMark
+        :name="item.name"
+        :label="item.label"
+        :size="16"
+        :radius="5"
+        :inverse="item.name === currentType"
+      />
       <span class="chip-label">{{ item.label }}</span>
       <span v-if="item.name === 'douyin-parenting'" class="parenting-tag">亲子</span>
     </div>
@@ -18,6 +24,8 @@
 </template>
 
 <script setup>
+import LogoMark from "@/components/LogoMark.vue";
+
 defineProps({
   categories: { type: Array, required: true },
   currentType: { type: String, required: true },
@@ -36,8 +44,8 @@ const emit = defineEmits(["change"]);
   .category-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
+    gap: 7px;
+    padding: 7px 14px;
     border-radius: var(--dh-radius-pill);
     background-color: var(--dh-bg-surface);
     border: 1px solid var(--dh-border-hairline);
@@ -46,7 +54,6 @@ const emit = defineEmits(["change"]);
     color: var(--dh-text-secondary);
     transition: all 0.2s;
 
-    .chip-icon { width: 16px; height: 16px; object-fit: contain; }
     .parenting-tag {
       font-size: 10px;
       padding: 1px 5px;
@@ -55,12 +62,19 @@ const emit = defineEmits(["change"]);
       color: #ffffff;
     }
 
-    &:hover { border-color: var(--dh-brand); color: var(--dh-brand); }
+    &:hover {
+      border-color: var(--dh-brand);
+      color: var(--dh-brand);
+    }
+
     &.active {
       background-color: var(--dh-brand);
       border-color: var(--dh-brand);
       color: #ffffff;
-      .parenting-tag { background-color: rgba(255, 255, 255, 0.25); }
+
+      .parenting-tag {
+        background-color: rgba(255, 255, 255, 0.25);
+      }
     }
   }
 }
