@@ -37,8 +37,8 @@
     <!-- 双分栏榜单：左 创作热点 / 右 亲子话题 -->
     <div v-else class="sections">
       <HeroBoardColumn
-        title="创作热点"
-        :subtitle="`上升热点 · ${spots.length} 条`"
+        title="亲子热点"
+        :subtitle="`实时更新 · ${spots.length} 条`"
         :rows="spotsShow"
         :max-hot="maxHot"
         :show-more="spots.length > HERO_SHOW"
