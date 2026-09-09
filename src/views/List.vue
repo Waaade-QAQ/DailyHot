@@ -5,7 +5,6 @@
       :current-type="listType"
       @change="changeType"
     />
-
     <div class="list-card">
       <ListHeader
         v-if="listData"
@@ -14,39 +13,43 @@
         :total="listData.total"
         :update-text="updateTime"
       />
-
       <GroupTabs
         v-if="isParentingList && hasKind"
         :options="groupOptions"
         :current="groupKind"
         @change="changeGroup"
       />
-
       <div v-if="loading" class="skeleton-wrap">
         <n-skeleton v-for="i in 10" :key="i" height="48px" round style="margin-bottom: 8px" />
       </div>
       <div v-else-if="listData?.data" class="list-content">
-        <RankRow
-          v-for="(item, index) in currentPageData"
-          :key="`${item.kind || 'x'}-${item.id || index}`"
-          :rank="index + 1 + (pageNumber - 1) * PAGE_SIZE"
-          :item="item"
-          variant="list"
-          :max-hot="maxHot"
-        />
-        <div class="pagination-bar" v-if="groupRows.length > PAGE_SIZE">
-          <n-pagination
-            :page-slot="5"
-            :item-count="groupRows.length"
-            :page-size="PAGE_SIZE"
-            v-model:page="pageNumber"
-          />
+        <!-- 亲子榜「全部」：分区平铺完整榜单 -->
+        <div v-if="isParentingList && hasKind && groupKind === 'all'" class="list-sections">
+          <ListSection title="亲子热点" :rows="spotRows" :max-hot="spotMaxHot" />
+          <ListSection title="亲子话题" :rows="topicRows" :max-hot="topicMaxHot" />
         </div>
+        <template v-else>
+          <RankRow
+            v-for="(item, index) in currentPageData"
+            :key="`${item.kind || 'x'}-${item.id || index}`"
+            :rank="index + 1 + (pageNumber - 1) * PAGE_SIZE"
+            :item="item"
+            variant="list"
+            :max-hot="maxHot"
+          />
+          <div class="pagination-bar" v-if="groupRows.length > PAGE_SIZE">
+            <n-pagination
+              :page-slot="5"
+              :item-count="groupRows.length"
+              :page-size="PAGE_SIZE"
+              v-model:page="pageNumber"
+            />
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -58,49 +61,48 @@ import RankRow from "@/components/RankRow.vue";
 import ListCategoryChips from "@/components/ListCategoryChips.vue";
 import ListHeader from "@/components/ListHeader.vue";
 import GroupTabs from "@/components/GroupTabs.vue";
-
+import ListSection from "@/components/ListSection.vue";
 const PAGE_SIZE = 20;
 const route = useRoute();
 const router = useRouter();
 const store = mainStore();
-
 const listType = ref(route.query.type || "douyin-parenting");
 const pageNumber = ref(Number(route.query.page) || 1);
 const groupKind = ref(["spot", "topic"].includes(route.query.group) ? route.query.group : "all");
 const listData = ref(null);
 const loading = ref(false);
 const updateTime = ref("");
-
 const groupOptions = [
   { label: "全部", value: "all" },
   { label: "创作热点", value: "spot" },
   { label: "亲子话题", value: "topic" },
 ];
-
 const isParentingList = computed(() => listType.value === "douyin-parenting");
 const hasKind = computed(() => listData.value?.data?.some((i) => i.kind));
-
 const sortedNewsArr = computed(() => {
   const visible = store.newsArr.filter((i) => i.show);
   const parenting = visible.filter((i) => i.name === "douyin-parenting");
   const rest = visible.filter((i) => i.name !== "douyin-parenting");
   return [...parenting, ...rest];
 });
-
+const spotRows = computed(() =>
+  (listData.value?.data || []).filter((i) => !i.kind || i.kind === "spot"),
+);
+const topicRows = computed(() =>
+  (listData.value?.data || []).filter((i) => i.kind === "topic"),
+);
+const spotMaxHot = computed(() => hotMax(spotRows.value));
+const topicMaxHot = computed(() => hotMax(topicRows.value));
 const groupRows = computed(() => {
-  const all = listData.value?.data || [];
-  if (groupKind.value === "topic") return all.filter((i) => i.kind === "topic");
-  if (groupKind.value === "spot") return all.filter((i) => !i.kind || i.kind === "spot");
-  return all;
+  if (groupKind.value === "topic") return topicRows.value;
+  if (groupKind.value === "spot") return spotRows.value;
+  return listData.value?.data || [];
 });
-
 const currentPageData = computed(() => {
   const start = (pageNumber.value - 1) * PAGE_SIZE;
   return groupRows.value.slice(start, start + PAGE_SIZE);
 });
-
 const maxHot = computed(() => hotMax(currentPageData.value));
-
 const pushQuery = (extra = {}) => {
   const query = {
     type: listType.value,
@@ -110,7 +112,6 @@ const pushQuery = (extra = {}) => {
   };
   router.push({ path: "/list", query });
 };
-
 const fetchListData = async (type, isNew = false) => {
   loading.value = true;
   listData.value = null;
@@ -129,7 +130,6 @@ const fetchListData = async (type, isNew = false) => {
     loading.value = false;
   }
 };
-
 const changeType = (type) => {
   if (type === listType.value) return;
   listType.value = type;
@@ -138,7 +138,6 @@ const changeType = (type) => {
   fetchListData(type);
   pushQuery();
 };
-
 const changeGroup = (group) => {
   if (group === groupKind.value) return;
   groupKind.value = group;
