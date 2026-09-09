@@ -14,28 +14,17 @@
       </div>
     </div>
 
-    <!-- 双分栏：左 = 实时热搜 + 创作热点（5+5），右 = 亲子话题 -->
+    <!-- 双分栏：左 = 创作热点（官方亲子垂类），右 = 亲子话题 -->
     <div v-else class="sections">
-      <div class="left-stack">
-        <HeroBoardColumn
-          title="实时热搜"
-          :subtitle="`官方 · 分钟级更新`"
-          :rows="officialShow"
-          :max-hot="maxHot"
-          :show-more="officialRows.length > HERO_GROUP"
-          empty-text="暂无热搜数据"
-          @more="goGroup('spot')"
-        />
-        <HeroBoardColumn
-          title="创作热点"
-          :subtitle="`创作者中心 · 每日快照`"
-          :rows="creatorShow"
-          :max-hot="maxHot"
-          :show-more="creatorRows.length > HERO_GROUP"
-          empty-text="暂无创作热点"
-          @more="goGroup('spot')"
-        />
-      </div>
+      <HeroBoardColumn
+        title="创作热点"
+        :subtitle="`创作者中心 · 亲子 · ${spots.length} 条`"
+        :rows="spotsShow"
+        :max-hot="maxHot"
+        :show-more="spots.length > HERO_SHOW"
+        empty-text="暂无创作热点"
+        @more="goGroup('spot')"
+      />
       <HeroBoardColumn
         title="亲子话题"
         :subtitle="`近 24h 播放 · ${topics.length} 条`"
@@ -64,7 +53,6 @@ import HeroBoardColumn from "@/components/HeroBoardColumn.vue";
 import HeroMasthead from "@/components/HeroMasthead.vue";
 
 const HERO_SHOW = 10;
-const HERO_GROUP = 5;
 const router = useRouter();
 const {
   hotListData,
@@ -80,17 +68,11 @@ const {
 
 const total = computed(() => hotListData.value?.data?.length || 0);
 
-// spot 按来源分组：rest（升级前无 source 的兜底）归入实时热搜
-const officialRows = computed(() =>
-  items.value.filter((i) => !i.kind || (i.kind === "spot" && i.source !== "creator")),
-);
-const creatorRows = computed(() =>
-  items.value.filter((i) => i.kind === "spot" && i.source === "creator"),
-);
+// spot（创作热点，无 source 的历史数据一并归入）
+const spots = computed(() => items.value.filter((i) => !i.kind || i.kind === "spot"));
 const topics = computed(() => items.value.filter((i) => i.kind === "topic"));
 
-const officialShow = computed(() => officialRows.value.slice(0, HERO_GROUP));
-const creatorShow = computed(() => creatorRows.value.slice(0, HERO_GROUP));
+const spotsShow = computed(() => spots.value.slice(0, HERO_SHOW));
 const topicsShow = computed(() => topics.value.slice(0, HERO_SHOW));
 
 const goGroup = (group) => {
@@ -134,13 +116,6 @@ onMounted(() => initObserver("hot-list-douyin-parenting"));
     grid-template-columns: 1fr 1fr;
     column-gap: 28px;
     @media (max-width: 900px) { grid-template-columns: 1fr; }
-  }
-
-  .left-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
   }
 
   .panel-footer {
